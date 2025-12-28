@@ -1,13 +1,12 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
-interface TokenPayload {
-  id: number;
-  email: string;
+interface JwtPayload {
+  userId: number;
 }
 
 export function authMiddleware(
-  req: Request,
+  req: Request & { userId?: number },
   res: Response,
   next: NextFunction
 ) {
@@ -20,12 +19,8 @@ export function authMiddleware(
   const [, token] = authHeader.split(" ");
 
   try {
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET as string
-    ) as TokenPayload;
-
-    req.user = decoded;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JwtPayload;
+    req.userId = decoded.userId;
     return next();
   } catch {
     return res.status(401).json({ error: "Token inválido" });

@@ -6,10 +6,10 @@ export class AuthController {
     const { email, password } = req.body;
 
     try {
-      const result = await AuthService.login(email, password);
-      return res.json(result);
+      const token = await AuthService.login(email, password);
+      return res.json({ token });
     } catch (err: any) {
-      return res.status(401).json({ error: err.message });
+      return res.status(400).json({ error: err.message });
     }
   }
 }
