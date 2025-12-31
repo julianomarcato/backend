@@ -1,21 +1,63 @@
-import { prisma } from "../lib/prisma"; // seu client do Prisma
-import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import bcrypt from "bcrypt";
+import { prisma } from "../lib/prisma";
 
 export class AuthService {
   static async login(email: string, password: string) {
     const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) throw new Error("Usuário ou senha inválidos");
+    if (!user) throw new Error("Invalid credentials");
 
-    const match = await bcrypt.compare(password, user.password);
-    if (!match) throw new Error("Usuário ou senha inválidos");
+    // ✅ valida senha corretamente
+    const passwordMatch = await bcrypt.compare(password, user.password);
+    if (!passwordMatch) throw new Error("Invalid credentials");
 
-    const token = jwt.sign(
-      { id: user.id, email: user.email },
-      process.env.JWT_SECRET || "changeme",
-      { expiresIn: "1h" }
+    const accessToken = jwt.sign(
+      {
+        id: user.id,
+        email: user.email,
+        role: user.role, // já aproveita para RBAC
+      },
+      process.env.JWT_SECRET!,
+      { expiresIn: "15m" }
     );
 
-    return token;
+    const refreshToken = jwt.sign(
+      { id: user.id },
+      process.env.JWT_REFRESH_SECRET!,
+      { expiresIn: "7d" }
+    );
+
+    await prisma.refreshToken.create({
+      data: {
+        token: refreshToken,
+        userId: user.id,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    return { accessToken, refreshToken };
+  }
+
+  static async refresh(token: string) {
+    const stored = await prisma.refreshToken.findUnique({
+      where: { token },
+    });
+
+    if (!stored || stored.expiresAt < new Date()) {
+      throw new Error("Invalid refresh token");
+    }
+
+    const payload = jwt.verify(
+      token,
+      process.env.JWT_REFRESH_SECRET!
+    ) as { id: number };
+
+    const newAccessToken = jwt.sign(
+      { id: payload.id },
+      process.env.JWT_SECRET!,
+      { expiresIn: "15m" }
+    );
+
+    return { accessToken: newAccessToken };
   }
 }

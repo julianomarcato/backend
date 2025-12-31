@@ -1,9 +1,11 @@
-import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
+import { Request, Response, NextFunction } from "express";
+import jwt from "jsonwebtoken";
+import { Role } from "@prisma/client";
 
 interface JwtPayload {
   id: number;
   email: string;
+  role: Role;
 }
 
 export function authMiddleware(
@@ -14,25 +16,25 @@ export function authMiddleware(
   const authHeader = req.headers.authorization;
 
   if (!authHeader) {
-    return res.status(401).json({ error: 'Token não informado' });
+    return res.status(401).json({ error: "Token não informado" });
   }
 
-  const [, token] = authHeader.split(' ');
+  const [, token] = authHeader.split(" ");
 
   try {
-    const decoded = jwt.verify(
+    const payload = jwt.verify(
       token,
       process.env.JWT_SECRET!
     ) as JwtPayload;
 
-    // AGORA O TS ACEITA
     req.user = {
-      id: decoded.id,
-      email: decoded.email,
+      id: payload.id,
+      email: payload.email,
+      role: payload.role,
     };
 
     next();
   } catch {
-    return res.status(401).json({ error: 'Token inválido ou expirado' });
+    return res.status(401).json({ error: "Token inválido ou expirado" });
   }
 }
