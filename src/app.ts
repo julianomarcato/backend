@@ -1,12 +1,11 @@
-import express from 'express'
-import authRoutes from './routes/auth.routes'
-import userRoutes from './routes/user.routes'
+import express from "express";
+import routes from "./routes";
 
-const app = express()
+const app = express();
 
-app.use(express.json())
+app.use(express.json());
 
-app.use('/auth', authRoutes)
-app.use('/users', userRoutes)
+// 🔹 Todas as rotas passam pelo agregador
+app.use(routes);
 
-export default app
+export default app;
