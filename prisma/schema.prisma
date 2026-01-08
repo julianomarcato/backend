@@ -27,6 +27,8 @@ model RefreshToken {
   revokedAt        DateTime?
   replacedByToken  String?
   createdAt        DateTime  @default(now())
+
+  @@index([userId])
 }
 
 enum Role {
